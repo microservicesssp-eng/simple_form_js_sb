@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Форма регистрации</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+</head>
+<body>
+<main class="card">
+    <h1>Форма регистрации</h1>
+    <p class="intro">Введите имя и фамилию — приложение сохранит их в MySQL.</p>
+
+    <form id="userForm">
+        <label for="name">Имя</label>
+        <input type="text" id="name" name="name" required maxlength="100" autocomplete="given-name">
+
+        <label for="surname">Фамилия</label>
+        <input type="text" id="surname" name="surname" required maxlength="100" autocomplete="family-name">
+
+        <button type="submit">Отправить</button>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+    </form>
+</main>
+</body>
+</html>

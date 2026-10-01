@@ -1,0 +1,162 @@
+ДЕМОНСТРАЦИОННЫЙ ПРОЕКТ: HTML + ЧИСТЫЙ JAVASCRIPT + SPRING BOOT + MYSQL
+=======================================================================
+
+Цель
+----
+Показать полный простой путь данных: пользователь заполняет HTML-форму,
+JavaScript отправляет JSON-запрос, Spring Boot принимает его и сохраняет
+запись в локальную MySQL. React, Docker и Docker Compose не используются.
+
+Структура проекта
+-----------------
+
+pom.xml
+  Maven-конфигурация. Подключает Spring Boot Web (HTTP и JSON), Spring Data
+  JPA (сохранение объектов в БД), Validation (проверка обязательных полей),
+  MySQL Connector/J (драйвер MySQL) и тестовую зависимость Spring Boot.
+  Для сборки нужен JDK 21 и Maven.
+
+src/main/java/ru/demo/simpleform/SimpleFormApplication.java
+  Точка входа. Запускает Spring Boot и встроенный веб-сервер на порту 8080.
+
+src/main/java/ru/demo/simpleform/user/User.java
+  Java-сущность, соответствующая записи таблицы users. Поля id, name и
+  surname сохраняются в базе. Идентификатор назначает MySQL автоматически.
+
+src/main/java/ru/demo/simpleform/user/UserRepository.java
+  Spring Data JPA репозиторий. Вызов save() вставляет запись в MySQL;
+  отдельный SQL-код для INSERT не нужен.
+
+src/main/java/ru/demo/simpleform/user/UserController.java
+  HTTP API POST /api/users. Принимает JSON с name и surname, проверяет,
+  что они не пустые, и возвращает сохранённую запись с HTTP 201 Created.
+
+src/main/resources/application.properties
+  Настройки подключения к MySQL на localhost:3306 и имени БД
+  registration_demo. По умолчанию пользователь MySQL — root, пароль пустой.
+  Переопределите их переменными DB_USERNAME и DB_PASSWORD, если у вас
+  другие реквизиты. Hibernate создаёт/обновляет таблицу автоматически
+  (spring.jpa.hibernate.ddl-auto=update).
+
+src/main/resources/static/index.html
+  Страница формы. Spring Boot сам раздаёт её по адресу http://localhost:8080/.
+
+src/main/resources/static/app.js
+  Обычный JavaScript без библиотек. Перехватывает отправку формы, собирает
+  name и surname, вызывает fetch("/api/users") с JSON, показывает результат
+  или сообщение об ошибке. Адрес относительный, поэтому CORS не требуется.
+
+src/main/resources/static/styles.css
+  Минимальные стили страницы формы.
+
+db/create-database.sql
+  SQL для создания пустой базы registration_demo. Таблицу users создаст
+  приложение при первом запуске.
+
+
+Требования
+----------
+  * JDK 21 (или совместимая версия, указанная в pom.xml).
+  * Maven 3.6+.
+  * Установленная и запущенная локальная MySQL Server.
+  * Доступ MySQL на localhost:3306 и права выбранного пользователя создавать
+    таблицы в базе registration_demo.
+  * Интернет при первой сборке, чтобы Maven загрузил зависимости.
+
+Пошаговый запуск на Linux
+-------------------------
+
+1. Убедитесь, что инструменты установлены:
+
+       java -version
+       mvn -version
+
+2. Запустите локальный сервер MySQL. На системах с systemd обычно:
+
+       sudo systemctl start mysql
+
+   В некоторых Linux-дистрибутивах имя службы — mariadb. Если MySQL у вас
+   уже запущен, этот шаг пропустите. Проверить службу можно командой:
+
+       sudo systemctl status mysql
+
+3. Создайте базу данных. Вариант с системным администратором MySQL:
+
+       mysql -u root -p < db/create-database.sql
+
+   Введите пароль MySQL после запроса. Если у root нет пароля, попробуйте:
+
+       mysql -u root < db/create-database.sql
+
+   Можно также войти в MySQL интерактивно командой `mysql -u root -p`,
+   затем выполнить содержимое файла db/create-database.sql и выйти командой
+   `exit`. Файл не создаёт пользователя и не меняет пароли.
+
+4. Если приложение должно подключаться не под root или у root есть пароль,
+   задайте фактические реквизиты. Например:
+
+       export DB_USERNAME=имя_пользователя
+       export DB_PASSWORD='пароль_mysql'
+
+   Затем запускайте приложение в этом же окне терминала. При необходимости
+   можно целиком переопределить JDBC URL через DB_URL. Например:
+
+       export DB_URL='jdbc:mysql://localhost:3306/registration_demo?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
+
+5. Перейдите в корень проекта и запустите приложение:
+
+       cd /home/karim/html_ex/simple_form_js_sb
+       mvn spring-boot:run
+
+   При первом запуске Maven скачает зависимости. Дождитесь сообщения о
+   запуске Tomcat на порту 8080. Оставьте этот терминал работающим.
+
+6. Откройте в браузере:
+
+       http://localhost:8080/
+
+   Заполните имя и фамилию и нажмите «Отправить». Появится подтверждение
+   с номером созданной записи. Если форма сообщает об ошибке, посмотрите
+   детали в терминале, где работает Spring Boot.
+
+7. Чтобы остановить приложение, нажмите Ctrl+C в терминале с Maven.
+
+
+Проверка сохранённых записей
+----------------------------
+Выполните в терминале, указав пользователя MySQL при необходимости:
+
+    mysql -u root -p -D registration_demo -e "SELECT id, name, surname FROM users;"
+
+Таблица users и её столбцы создаются автоматически приложением при первом
+подключении к существующей базе.
+
+
+Проверка API отдельно от браузера (необязательно)
+-------------------------------------------------
+Когда приложение запущено, запрос можно отправить curl:
+
+    curl -i -X POST http://localhost:8080/api/users \
+      -H 'Content-Type: application/json' \
+      -d '{"name":"Иван","surname":"Иванов"}'
+
+Успешный ответ имеет статус 201 и содержит JSON сохранённой записи, например:
+
+    {"id":1,"name":"Иван","surname":"Иванов"}
+
+
+Если что-то не работает
+-----------------------
+  * Connection refused / Communications link failure: проверьте, что MySQL
+    запущен и слушает localhost:3306.
+  * Access denied: задайте правильные DB_USERNAME и DB_PASSWORD.
+  * Unknown database: выполните шаг создания registration_demo.
+  * Port 8080 already in use: освободите порт или запустите Maven с параметром
+    `-Dspring-boot.run.arguments=--server.port=8081`, затем откройте
+    http://localhost:8081/.
+  * Если вы задали DB_USERNAME/DB_PASSWORD в другом терминале, задайте их
+    заново в терминале, где запускаете Maven.
+
+Это учебный пример. В реальном приложении не следует использовать root для
+подключения приложения к базе; лучше создать отдельного MySQL-пользователя
+с правами только на нужную базу и не хранить пароль в исходном коде.
